@@ -1,21 +1,35 @@
 using System;
 using System.Collections.Generic;
-using System.IO;
-using System.Net;
 using System.Net.Http;
 using System.Security.Cryptography;
 using System.Text;
-using System.Text.Json;
 using System.Net.Http.Json;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.WebUtilities;
+using Microsoft.Extensions.Logging;
 
 namespace BaiduBce.Sms
 {
-    // doc: https://cloud.baidu.com/doc/Reference/s/njwvz1yfu
-    public static class AuthHelper
+    public interface IAuthService
     {
-        public static async Task<T2> SendDateAsync<T1, T2>(
+        Task<T2> SendDateAsync<T1, T2>(
+            HttpClient httpClient,
+            HttpMethod httpMethod,
+            Uri apiEndpoint,
+            T1 payload = default);
+    }
+
+    // doc: https://cloud.baidu.com/doc/Reference/s/njwvz1yfu
+    public class AuthService : IAuthService
+    {
+        private readonly ILogger<AuthService> _logger;
+
+        public AuthService(ILogger<AuthService> logger)
+        {
+            _logger = logger;
+        }
+
+        public async Task<T2> SendDateAsync<T1, T2>(
             HttpClient httpClient,
             HttpMethod httpMethod,
             Uri apiEndpoint,
@@ -35,36 +49,26 @@ namespace BaiduBce.Sms
                 request.Headers.TryAddWithoutValidation("Content-Type", "application/json");
             }
 
-
             var response = await httpClient.SendAsync(request);
 
             if (response.IsSuccessStatusCode)
             {
-                try
-                {
-                    return await response.Content.ReadFromJsonAsync<T2>();
-                }
-                catch (NotSupportedException) // When content type is not valid
-                {
-                    Console.WriteLine("The content type is not supported.");
-                }
-                catch (JsonException) // Invalid JSON
-                {
-                    Console.WriteLine("Invalid JSON.");
-                }
+                return await response.Content.ReadFromJsonAsync<T2>();
             }
 
+            _logger.LogError("Call Return status code: {ResponseStatusCode} in {ApiEndpoint}", response.StatusCode,
+                apiEndpoint);
             return default;
         }
 
-        private static (string signDate, string authorization) SignDate<T>((string httpMethod, Uri apiUri) requestInfo)
+        private (string signDate, string authorization) SignDate<T>((string httpMethod, Uri apiUri) requestInfo)
         {
             var accessKeyId = Environment.GetEnvironmentVariable("BCE_ACCESS_KEY_ID");
             var secretAccessKey = Environment.GetEnvironmentVariable("BCE_SECRET_ACCESS_KEY");
 
             if (string.IsNullOrWhiteSpace(accessKeyId) || string.IsNullOrWhiteSpace(secretAccessKey))
             {
-                throw new Exception("BCE_ACCESS_KEY_ID or BCE_SECRET_ACCESS_KEY is not set");
+                throw new ArgumentException("BCE_ACCESS_KEY_ID or BCE_SECRET_ACCESS_KEY is not set");
             }
 
             var now = DateTime.Now;
@@ -83,7 +87,7 @@ namespace BaiduBce.Sms
             return (signDate, authorization);
         }
 
-        private static string Hex(byte[] data)
+        private string Hex(byte[] data)
         {
             var sb = new StringBuilder();
             foreach (var b in data) sb.Append(b.ToString("x2"));
@@ -91,7 +95,7 @@ namespace BaiduBce.Sms
             return sb.ToString();
         }
 
-        private static string CanonicalRequest((string httpMethod, Uri apiUri) requestInfo)
+        private string CanonicalRequest((string httpMethod, Uri apiUri) requestInfo)
         {
             var uri = requestInfo.apiUri;
             var canonicalReq = new StringBuilder();
@@ -114,7 +118,7 @@ namespace BaiduBce.Sms
             return canonicalReq.ToString();
         }
 
-        private static string UriEncode(string input, bool encodeSlash = false)
+        private string UriEncode(string input, bool encodeSlash = false)
         {
             var builder = new StringBuilder();
             foreach (var b in Encoding.UTF8.GetBytes(input))

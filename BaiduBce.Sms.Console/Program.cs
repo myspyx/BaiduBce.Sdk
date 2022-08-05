@@ -6,7 +6,7 @@ Console.WriteLine("Hello, World!");
 
 var app = HostBuilder.CreateHostBuilder(args).Build();
 var smsClient = app.Services.GetService<ISmsClient>();
-var phoneNo = Environment.GetEnvironmentVariable("PHONE_NO");
+var phoneNo = Environment.GetEnvironmentVariable("BCE_TEST_PHONE_NO");
 
 if (smsClient != null)
 {

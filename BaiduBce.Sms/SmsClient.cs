@@ -10,6 +10,13 @@ namespace BaiduBce.Sms
 {
     public interface ISmsClient
     {
+        /// <summary>
+        /// Send sms message.
+        /// </summary>
+        /// <param name="smsPayload">The sms payload will be sent</param>
+        /// <param name="clientToken">The idempotence parameter prevents the client from sending the same text message multiple times
+        /// when the http response times out and retries.</param>
+        /// <returns>Sms send result</returns>
         Task<bool> Send(SmsPayload smsPayload, string clientToken);
     }
 
@@ -29,6 +36,14 @@ namespace BaiduBce.Sms
 
         public async Task<bool> Send(SmsPayload smsPayload, string clientToken)
         {
+            if (smsPayload == null
+                || string.IsNullOrWhiteSpace(smsPayload.Mobile)
+                || string.IsNullOrWhiteSpace(smsPayload.SignatureId)
+                || string.IsNullOrWhiteSpace(smsPayload.Template))
+            {
+                throw new ArgumentNullException(nameof(smsPayload), "smsPayload is null or empty");
+            }
+
             const string apiHost = "smsv3.bj.baidubce.com";
             const string apiEndpoint = "/api/v3/sendSms";
 

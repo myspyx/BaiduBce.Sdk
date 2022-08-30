@@ -18,7 +18,7 @@ if (smsClient != null)
         SignatureId = "sms-sign-DLwztD51234",
         ContentVar = new Dictionary<string, string>
         {
-            {"code", "787878"}
+            {"code", "78787889"}
         }
     }, Guid.NewGuid().ToString());
     Console.WriteLine($"SMS Sent result: {sentResult}");
@@ -27,7 +27,7 @@ if (smsClient != null)
     var sentResult2 = await smsClient.Send(new SmsPayload
     {
         Mobile = phoneNo,
-        Template = "sms-tmpl-ZePaUM26457",
+        Template = "sms-tmpl-hCsaZi54332",
         SignatureId = "sms-sign-DLwztD51234",
         ContentVar = new Dictionary<string, string>
         {

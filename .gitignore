@@ -404,3 +404,5 @@ obj/
 [B/b]in/
 .DS_Store
 
+# VS Code
+.vscode/
